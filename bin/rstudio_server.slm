@@ -1,0 +1,112 @@
+#!/bin/sh
+#SBATCH --signal=USR2
+#SBATCH --ntasks=1
+#SBATCH --output=rstudio_server/%j.log
+
+PORT_RANGE_START=50000
+PORT_RANGE_END=50100
+
+# Help message
+usage() {
+    echo "Usage: $0 [<container_name>]"
+    echo "Container_name:"
+    echo "  Name of a singularity image containing rstudio server"
+    exit 1
+}
+
+
+# Create temporary directory to be populated with directories to bind-mount in the container
+# where writable file systems are necessary. Adjust path as appropriate for your computing environment.
+workdir="rstudio_server"
+mkdir -p -m 700 $workdir
+
+# Parse optionsi
+while [[ $# -gt 0 ]]; do
+    key="$1"
+    case $key in
+        -h|--help)
+        usage
+        ;;
+        *)
+        # If not a recognized option, assume it's the container name/path
+        CONTAINER_NAME="$1"
+        shift
+        ;;
+    esac
+done
+
+# Check if container name is provided
+if [[ -z "$CONTAINER_NAME" ]]; then
+    echo "Error: Container name/path is required."
+    usage
+fi
+
+# Load singularitty module from cluster LMOD (this may change)
+module load singularity
+mkdir -p -m 700 ${workdir}/run ${workdir}/tmp ${workdir}/var/lib/rstudio-server
+cat > ${workdir}/database.conf <<END
+provider=sqlite
+directory=/var/lib/rstudio-server
+END
+
+# Set OMP_NUM_THREADS to prevent OpenBLAS (and any other OpenMP-enhanced
+# libraries used by R) from spawning more threads than the number of processors
+# allocated to the job.
+#
+# Set R_LIBS_USER to a path specific to rocker/rstudio to avoid conflicts with
+# personal libraries from any R installation in the host environment
+
+cat > ${workdir}/rsession.sh <<END
+#!/bin/sh
+export OMP_NUM_THREADS=${SLURM_JOB_CPUS_PER_NODE}
+export R_LIBS_USER=${HOME}/R/rocker-rstudio/4.2
+exec /usr/lib/rstudio-server/bin/rsession "\${@}"
+END
+
+chmod +x ${workdir}/rsession.sh
+
+BINDINGS="${workdir}/run:/run,${workdir}/tmp:/tmp,${workdir}/database.conf:/etc/rstudio/database.conf,${workdir}/rsession.sh:/etc/rstudio/rsession.sh,${workdir}/var/lib/rstudio-server:/var/lib/rstudio-server"
+
+
+# Do not suspend idle sessions.
+# Alternative to setting session-timeout-minutes=0 in /etc/rstudio/rsession.conf
+export SINGULARITYENV_RSTUDIO_SESSION_TIMEOUT=0
+export SINGULARITYENV_USER=$(id -un)
+
+# get unused socket 
+readonly PORT=$(python3 bin/get_free_port.py ${PORT_RANGE_START} ${PORT_RANGE_END})
+
+# Check if container name is provided
+if [[ -z "$PORT" ]]; then
+    echo "Error: Cannot find a free port."
+    exit
+fi
+
+
+cat 1>&2 <<END
+1. SSH tunnel from your workstation using the following command:
+
+   ssh -L 8787:${HOSTNAME}:${PORT} ${SINGULARITYENV_USER}@minastirith
+
+2. Point your web browser to:
+	
+	 http://localhost:8787
+
+
+When done using RStudio Server, terminate the job by:
+
+1. Exit the RStudio Session ("power" button in the top right corner of the RStudio window)
+2. Issue the following command on the login node:
+      scancel -f ${SLURM_JOB_ID}
+END
+
+singularity exec --cleanenv -B ${BINDINGS} ${CONTAINER_NAME} \
+    /usr/lib/rstudio-server/bin/rserver --www-port ${PORT}  \
+            --auth-none=1 \
+            --auth-pam-helper-path=pam-helper \
+            --auth-stay-signed-in-days=30 \
+            --auth-timeout-minutes=0 \
+            --server-user=${USER} \
+            --rsession-path=/etc/rstudio/rsession.sh 2>&1
+
+printf 'rserver exited' 2>&1

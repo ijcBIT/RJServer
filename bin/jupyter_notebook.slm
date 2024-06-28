@@ -1,0 +1,119 @@
+#!/bin/bash
+#SBATCH --signal=USR2
+#SBATCH --ntasks=1
+#SBATCH --output=jupyter_notebook/%j.log
+
+PORT_RANGE_START=50200
+PORT_RANGE_END=50300
+
+# Help message
+usage() {
+    echo "Usage: $0 [<container_name>]"
+    echo "Container_name:"
+    echo "  Name of a singularity image containing jupyter notebook"
+    exit 1
+}
+
+
+# Create temporary directory to be populated with directories to bind-mount in the container
+# where writable file systems are necessary. Adjust path as appropriate for your computing environment.
+workdir="${PWD}/jupyter_notebook"
+echo "Working directory=$workdir"
+mkdir -p -m 700 $workdir
+
+# Parse optionsi
+while [[ $# -gt 0 ]]; do
+    key="$1"
+    case $key in
+        -h|--help)
+        usage
+        ;;
+        *)
+        # If not a recognized option, assume it's the container name/path
+        CONTAINER_NAME="$1"
+        shift
+        ;;
+    esac
+done
+
+# Check if container name is provided
+if [[ -z "$CONTAINER_NAME" ]]; then
+    echo "Error: Container name/path is required."
+    usage
+fi
+
+# Load singularitty module from cluster LMOD 
+module load singularity
+
+# Bind directories
+BINDINGS="${workdir}:/home/jovyan/work"
+
+#get unused socket 
+readonly PORT=$(python3 bin/get_free_port.py ${PORT_RANGE_START} ${PORT_RANGE_END})
+
+# Check if container name is provided
+if [[ -z "$PORT" ]]; then
+    echo "Error: Cannot find a free port."
+    exit
+fi
+
+# Function to process output and extract token
+process_output() {
+    local found_token=false
+    while IFS= read -r line; do
+        # Print each line as it is received (optional)
+        echo "$line"
+        
+        # Extract the token if present
+        token=$(echo "$line" | grep -oP 'token=\K\S+')
+        
+        # Check if token is found
+        if [ -n "$token" ]; then
+            echo "Token found: $token"
+            found_token=true
+            break
+        fi
+    done
+
+    # If token was not found and timeout occurred (10 seconds), print all output
+    if ! $found_token; then
+        echo "Timeout: Token not found within 10 seconds"
+        # Optionally, you can process or store all output lines here
+    fi
+}
+
+
+# Run the command and capture stdout and stderr
+output=$(singularity exec --cleanenv -B "${BINDINGS}" "${CONTAINER_NAME}" start-notebook.py --port="${PORT}" 2>&1)
+echo $output
+
+# Extract the token if present
+token=$(echo "$output" | grep -oP 'token=\K\S+')
+echo $token
+
+# Check if token is empty (not found)
+if [ -z "$token" ]; then
+    echo "Token not found"
+    echo $output
+else
+    echo "Token found: $token"
+
+    cat 1>&2 <<END
+    1. SSH tunnel from your workstation using the following command:
+
+    ssh -L 8888:${HOSTNAME}:${PORT} ${SINGULARITYENV_USER}@minastirith
+
+    2. Point your web browser to:
+        
+        http://localhost:8888/lab?token=${token}
+
+    When done using RStudio Server, terminate the job by:
+
+    1. Exit the RStudio Session ("power" button in the top right corner of the RStudio window)
+    2. Issue the following command on the login node:
+        scancel -f ${SLURM_JOB_ID}
+    END
+fi
+
+
+
