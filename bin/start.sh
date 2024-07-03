@@ -67,6 +67,11 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
+# Create temporary directory to be populated with directories to bind-mount in the container
+# where writable file systems are necessary. 
+workdir="${PWD}/${SLUMR_SERVER_LOG_FOLDER}"
+mkdir -p -m 700 $workdir
+
 # Load singularitty module from cluster LMOD 
 module load singularity
 

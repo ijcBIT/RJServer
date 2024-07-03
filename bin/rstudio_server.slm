@@ -12,10 +12,14 @@ usage() {
     exit 1
 }
 
+# load required modules
+module load singularity
+module load python
 
-# Create temporary directory to be populated with directories to bind-mount in the container
-# where writable file systems are necessary. Adjust path as appropriate for your computing environment.
-workdir="rstudio_server"
+
+# Temporary directory to be populated with directories to bind-mount in the container
+# where writable file systems are necessary. 
+workdir="${PWD}/rstudio_server"
 mkdir -p -m 700 $workdir
 
 # Parse optionsi

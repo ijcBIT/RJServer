@@ -14,9 +14,13 @@ usage() {
     exit 1
 }
 
+# load required modules
+module load singularity
+module load python
+
 
 # Create temporary directory to be populated with directories to bind-mount in the container
-# where writable file systems are necessary. Adjust path as appropriate for your computing environment.
+# where writable file systems are necessary.
 workdir="${PWD}/jupyter_notebook"
 mkdir -p -m 700 $workdir
 
@@ -85,10 +89,12 @@ if [ -z "${TOKEN}" ]; then
     exit
 fi
 
+USER=$(whoami)
+
 cat 1>&2 <<END
 1. SSH tunnel from your workstation using the following command:
 
-ssh -L 8888:${HOSTNAME}:${PORT} ${SINGULARITYENV_USER}@minastirith
+ssh -L 8888:${HOSTNAME}:${PORT} ${USER}@minastirith
 
 2. Point your web browser to:
     
