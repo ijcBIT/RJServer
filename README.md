@@ -1,4 +1,4 @@
-# RPyServer
+# RJServer
 
 ## Overview
 This repository contains two scripts to start Jupyter Notebook and RStudio Server on a High-Performance Computing (HPC) system and connect to them from your workstation. The scripts utilize Singularity container images for both Jupyter Notebook and RStudio Server, enabling an easy and consistent environment setup.
@@ -13,13 +13,13 @@ To use these scripts, follow the instructions below:
 ### Clone the Repository
 Clone the repository in your home directory on the HPC:
 ```bash
-git clone https://github.com/ijcBIT/RPyServer.git
+git clone https://github.com/ijcBIT/RJServer.git
 ```
 
 ### Running the Scripts
 Navigate to the cloned repository:
 ```bash
-cd RPyServer
+cd RJServer
 ```
 
 #### Start Jupyter Notebook
@@ -78,4 +78,4 @@ After running the scripts, follow the instructions provided by the scripts to co
     ```
 
 ## Issues and Requests
-If you encounter any issues or have requests, please submit an issue on GitHub: [RPyServer Issues](https://github.com/ijcBIT/RPyServer/issues)
+If you encounter any issues or have requests, please submit an issue on GitHub: [RJServer Issues](https://github.com/ijcBIT/RJServer/issues)
