@@ -3,7 +3,7 @@
 
 # Help information
 usage() {
-    echo "Usage: $0 [OPTIONS]"
+    echo "Usage: ./<script_name>.sh [OPTIONS]"
     echo "Options:"
     echo "  Any slurm parameter to pass to sbatch"
     echo "  -c, --container name      Specify container name"
