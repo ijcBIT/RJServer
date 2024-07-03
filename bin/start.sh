@@ -13,6 +13,7 @@ usage() {
 }
 
 # Parse arguments
+CONTAINER_NAME=$SLUMR_SERVER_CONTAINER_NAME
 while [[ $# -gt 0 ]]; do
     key="$1"
     case $key in
@@ -66,12 +67,19 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
+# Load singularitty module from cluster LMOD 
+module load singularity
+
+# pull default image from the library if not present
+if  [ "$SLUMR_SERVER_CONTAINER_NAME" == "$CONTAINER_NAME" ] && [ ! -e "$CONTAINER_NAME" ]; then
+    singularity pull --library http://10.110.20.108 library://$SLUMR_SERVER_DEFAULT_CONTAINER_LIB
+fi
+
 # Submit job using sbatch
-JOB_ID=$(sbatch --parsable $sbatch_options $SLUMR_SERVER_SCRIPT "$SLUMR_SERVER_CONTAINER_NAME" 2>&1)
+JOB_ID=$(sbatch --parsable $sbatch_options $SLUMR_SERVER_SCRIPT "$CONTAINER_NAME" 2>&1)
 
 # Wait until the job has started and written something to the log file
 LOG_FILE="$SLUMR_SERVER_LOG_FOLDER/$(echo $JOB_ID | cut -f 1 -d '.').log"
-echo "$LOG_FILE"
 while ! test -s $LOG_FILE
 do
     sleep 1

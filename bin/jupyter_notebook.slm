@@ -18,7 +18,6 @@ usage() {
 # Create temporary directory to be populated with directories to bind-mount in the container
 # where writable file systems are necessary. Adjust path as appropriate for your computing environment.
 workdir="${PWD}/jupyter_notebook"
-echo "Working directory=$workdir"
 mkdir -p -m 700 $workdir
 
 # Parse optionsi
@@ -42,9 +41,6 @@ if [[ -z "$CONTAINER_NAME" ]]; then
     usage
 fi
 
-# Load singularitty module from cluster LMOD 
-module load singularity
-
 # Bind directories
 BINDINGS="${workdir}:/home/jovyan/work"
 
@@ -57,63 +53,54 @@ if [[ -z "$PORT" ]]; then
     exit
 fi
 
-# Function to process output and extract token
-process_output() {
-    local found_token=false
-    while IFS= read -r line; do
-        # Print each line as it is received (optional)
-        echo "$line"
-        
-        # Extract the token if present
-        token=$(echo "$line" | grep -oP 'token=\K\S+')
-        
-        # Check if token is found
-        if [ -n "$token" ]; then
-            echo "Token found: $token"
-            found_token=true
-            break
-        fi
-    done
+# Create a temporary file to store the output
+OUTPUT_FILE=$(mktemp)
 
-    # If token was not found and timeout occurred (10 seconds), print all output
-    if ! $found_token; then
-        echo "Timeout: Token not found within 10 seconds"
-        # Optionally, you can process or store all output lines here
+# Run the singularity command in detached mode
+nohup singularity exec --cleanenv -B "${BINDINGS}" "${CONTAINER_NAME}" start-notebook.py --port="${PORT}" > "${OUTPUT_FILE}" 2>&1 &
+
+# Capture the process ID (PID) of the background command
+pid=$!
+
+# Initialize a variable to store the token
+TOKEN=""
+
+# Loop to check the output file periodically
+for i in {1..10}; do
+    # Check for the token in the output
+    TOKEN=$(grep -m 1 -o "token=[^ ]*" "${OUTPUT_FILE}")
+
+    if [ -n "${TOKEN}" ]; then
+        break
     fi
-}
 
-
-# Run the command and capture stdout and stderr
-output=$(singularity exec --cleanenv -B "${BINDINGS}" "${CONTAINER_NAME}" start-notebook.py --port="${PORT}" 2>&1)
-echo $output
-
-# Extract the token if present
-token=$(echo "$output" | grep -oP 'token=\K\S+')
-echo $token
+    # Wait for 1 second before the next check
+    sleep 1
+done
 
 # Check if token is empty (not found)
-if [ -z "$token" ]; then
+if [ -z "${TOKEN}" ]; then
     echo "Token not found"
-    echo $output
-else
-    echo "Token found: $token"
-
-    cat 1>&2 <<END
-    1. SSH tunnel from your workstation using the following command:
-
-    ssh -L 8888:${HOSTNAME}:${PORT} ${SINGULARITYENV_USER}@minastirith
-
-    2. Point your web browser to:
-        
-        http://localhost:8888/lab?token=${token}
-
-    When done using RStudio Server, terminate the job by:
-
-    1. Exit the RStudio Session ("power" button in the top right corner of the RStudio window)
-    2. Issue the following command on the login node:
-        scancel -f ${SLURM_JOB_ID}
-    END
+    cat "${OUTPUT_FILE}"
+    exit
 fi
 
+cat 1>&2 <<END
+1. SSH tunnel from your workstation using the following command:
 
+ssh -L 8888:${HOSTNAME}:${PORT} ${SINGULARITYENV_USER}@minastirith
+
+2. Point your web browser to:
+    
+    http://localhost:8888/lab?${TOKEN}
+
+When done using Jupyter Notebook, terminate the job by:
+
+1. Close you Jupyter Notebook 
+2. Issue the following command on the login node:
+    scancel -f ${SLURM_JOB_ID}
+END
+
+# Wait for the process to finish
+wait $pid
 
