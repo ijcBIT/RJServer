@@ -13,7 +13,7 @@ To use these scripts, follow the instructions below:
 ### Clone the Repository
 Clone the repository in your workstation:
 ```bash
-git clone https://github.com/ijcBIT/RJServer.git
+git clone git@github.com:ijcBIT/RJServer.git
 ```
 
 #### Start Jupyter Notebook
