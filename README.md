@@ -11,15 +11,9 @@ This repository contains two scripts to start Jupyter Notebook and RStudio Serve
 To use these scripts, follow the instructions below:
 
 ### Clone the Repository
-Clone the repository in your home directory on the HPC:
+Clone the repository in your workstation:
 ```bash
 git clone https://github.com/ijcBIT/RJServer.git
-```
-
-### Running the Scripts
-Navigate to the cloned repository:
-```bash
-cd RJServer
 ```
 
 #### Start Jupyter Notebook
@@ -55,29 +49,6 @@ For help, use the -h or --help parameter:
 ./start_jupyter_notebook.sh -h
 ./start_rstudio_server.sh -h
 ```
-
-## Connecting from Your Workstation
-After running the scripts, follow the instructions provided by the scripts to connect to the servers from your workstation.
-
-### Jupyter Notebook
-1. Create an SSH tunnel:
-    ```bash
-    ssh -L 8888:{HPC_NODE}:{ASSIGNED_PORT} {USER}@minastirith
-    ```
-2. Open a browser and navigate to:
-    ```
-    http://localhost:8888/lab?token={TOKEN}
-    ```
-
-### RStudio Server
-1. Create an SSH tunnel:
-    ```bash
-    ssh -L 8787:{HPC_NODE}:{ASSIGNED_PORT} {USER}@minastirith
-    ```
-2. Open a browser and navigate to:
-    ```
-    http://localhost:8787
-    ```
 
 ## Issues and Requests
 If you encounter any issues or have requests, please submit an issue on GitHub: [RJServer Issues](https://github.com/ijcBIT/RJServer/issues)
