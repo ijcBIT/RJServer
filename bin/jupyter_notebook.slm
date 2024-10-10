@@ -1,6 +1,7 @@
 #!/bin/bash
-#SBATCH --signal=USR2
-#SBATCH --ntasks=1
+#SBATCH --partition=highMem
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=8
 #SBATCH --output=jupyter_notebook/%j.log
 
 PORT_RANGE_START=50200
@@ -24,7 +25,7 @@ module load python
 workdir="${PWD}/jupyter_notebook"
 mkdir -p -m 700 $workdir
 
-# Parse optionsi
+# Parse options
 while [[ $# -gt 0 ]]; do
     key="$1"
     case $key in
@@ -41,12 +42,9 @@ done
 
 # Check if container name is provided
 if [[ -z "$CONTAINER_NAME" ]]; then
-    echo "Error: Container name/path is required."
+    echo "Error: Container name/path is required." >&2
     usage
 fi
-
-# Bind directories
-BINDINGS="${workdir}:/home/jovyan/work"
 
 #get unused socket 
 readonly PORT=$(python3 bin/get_free_port.py ${PORT_RANGE_START} ${PORT_RANGE_END})
@@ -60,52 +58,16 @@ fi
 # Create a temporary file to store the output
 OUTPUT_FILE=$(mktemp)
 
-# Run the singularity command in detached mode
-nohup singularity exec --cleanenv -B "${BINDINGS}" "${CONTAINER_NAME}" start-notebook.py --port="${PORT}" > "${OUTPUT_FILE}" 2>&1 &
+# Run the singularity command in detached mode with token and password disabled
+nohup singularity exec --cleanenv "${CONTAINER_NAME}" start-notebook.py --port="${PORT}" \
+    --NotebookApp.token='' --NotebookApp.password='' > "${OUTPUT_FILE}" 2>&1 &
 
 # Capture the process ID (PID) of the background command
 pid=$!
 
-# Initialize a variable to store the token
-TOKEN=""
-
-# Loop to check the output file periodically
-for i in {1..10}; do
-    # Check for the token in the output
-    TOKEN=$(grep -m 1 -o "token=[^ ]*" "${OUTPUT_FILE}")
-
-    if [ -n "${TOKEN}" ]; then
-        break
-    fi
-
-    # Wait for 1 second before the next check
-    sleep 1
-done
-
-# Check if token is empty (not found)
-if [ -z "${TOKEN}" ]; then
-    echo "Token not found"
-    cat "${OUTPUT_FILE}"
-    exit
-fi
-
-USER=$(whoami)
-
-cat 1>&2 <<END
-1. SSH tunnel from your workstation using the following command:
-
-ssh -L 8888:${HOSTNAME}:${PORT} ${USER}@minastirith
-
-2. Point your web browser to:
-    
-    http://localhost:8888/lab?${TOKEN}
-
-When done using Jupyter Notebook, terminate the job by:
-
-1. Close you Jupyter Notebook 
-2. Issue the following command on the login node:
-    scancel -f ${SLURM_JOB_ID}
-END
+## Capture the command for the ssh tunnel
+echo '!/bin/bash' > ~/.RJServer/tunnel.sh
+printf "ssh -N -L 8888:${HOSTNAME}:${PORT} " > ~/.RJServer/tunnel.sh
 
 # Wait for the process to finish
 wait $pid

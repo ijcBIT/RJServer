@@ -1,6 +1,8 @@
-#!/bin/sh
+#!/bin/bash
+#SBATCH --partition=highMem
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=8
 #SBATCH --output=rstudio_server/%j.log
-
 PORT_RANGE_START=50000
 PORT_RANGE_END=50100
 
@@ -16,13 +18,12 @@ usage() {
 module load singularity
 module load python
 
-
 # Temporary directory to be populated with directories to bind-mount in the container
 # where writable file systems are necessary. 
 workdir="${PWD}/rstudio_server"
 mkdir -p -m 700 $workdir
 
-# Parse optionsi
+# Parse options
 while [[ $# -gt 0 ]]; do
     key="$1"
     case $key in
@@ -43,8 +44,6 @@ if [[ -z "$CONTAINER_NAME" ]]; then
     usage
 fi
 
-# Load singularitty module from cluster LMOD (this may change)
-module load singularity
 mkdir -p -m 700 ${workdir}/run ${workdir}/tmp ${workdir}/var/lib/rstudio-server
 cat > ${workdir}/database.conf <<END
 provider=sqlite
@@ -96,25 +95,10 @@ nohup singularity exec --cleanenv -B ${BINDINGS} ${CONTAINER_NAME} \
 # Capture the process ID (PID) of the background command
 pid=$!
 
-cat 1>&2 <<END
-1. SSH tunnel from your workstation using the following command:
-
-   ssh -L 8787:${HOSTNAME}:${PORT} ${SINGULARITYENV_USER}@minastirith
-
-2. Point your web browser to:
-	
-	 http://localhost:8787
-
-
-When done using RStudio Server, terminate the job by:
-
-1. Exit the RStudio Session ("power" button in the top right corner of the RStudio window)
-2. Issue the following command on the login node:
-      scancel -f ${SLURM_JOB_ID}
-END
+## Capture the command for the ssh tunnel
+echo '!/bin/bash' > ~/.RJServer/tunnel.sh
+printf "ssh -N -L 8787:${HOSTNAME}:${PORT} " > ~/.RJServer/tunnel.sh
 
 # Wait for the process to finish
 wait $pid
 
-
-printf 'rserver exited' 2>&1
