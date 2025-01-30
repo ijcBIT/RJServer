@@ -10,7 +10,8 @@ module load singularity
 
 # pull default image from the library if not present
 if  [ "$SLUMR_SERVER_CONTAINER_NAME" == "$CONTAINER_NAME" ] && [ ! -e "$CONTAINER_NAME" ]; then
-    singularity pull --library http://10.110.20.108 library://$SLUMR_SERVER_DEFAULT_CONTAINER_LIB
+    echo "singularity pull --library http://10.110.20.108 $SLUMR_SERVER_CONTAINER_NAME library://$SLUMR_SERVER_DEFAULT_CONTAINER_LIB" 
+    singularity pull --library http://10.110.20.108 $SLUMR_SERVER_CONTAINER_NAME library://$SLUMR_SERVER_DEFAULT_CONTAINER_LIB
 fi
 
 # Submit job using sbatch
