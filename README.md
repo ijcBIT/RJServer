@@ -30,7 +30,7 @@ To start an RStudio Server, run:
 ```
 
 ### Custom Container Images
-As default it uses a singularity image created from the bioconductor images [bioconductor/tidyverse:RELEASE_3_20-R-4.4.2](docker://bioconductor/tidyverse:RELEASE_3_20-R-4.4.2) for the studio server and [jupyter/datascience-notebook:2024-06-24](https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html#jupyter-datascience-notebook) for Jypyter notebook.
+As default it uses a singularity image created from the bioconductor images [bioconductor/tidyverse:RELEASE_3_20-R-4.4.2](https://www.bioconductor.org/help/docker/) for the studio server and [jupyter/datascience-notebook:2024-06-24](https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html#jupyter-datascience-notebook) for Jypyter notebook.
 
 If you need to use custom container images, you can specify the container image path (.sif file), with the -c or --container parameter:
 
