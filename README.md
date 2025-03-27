@@ -57,7 +57,7 @@ For help, use the -h or --help parameter:
 ## Issues and Requests
 
 > [!TIP]
-> RJServer creates a hidden folder named `.RJServer` in your > home directory on the cluster. Inside this folder, you can > check the logs to troubleshoot any issues. If nothing > > works, try removing the folder and starting again.
+> RJServer creates a hidden folder named `.RJServer` in your home directory on the cluster. Inside this folder, you can check the logs to troubleshoot any issues. If nothing works, try removing this folder and starting again.
 
 
 If you encounter any issues or have requests, please submit an issue on GitHub: [RJServer Issues](https://github.com/ijcBIT/RJServer/issues)
