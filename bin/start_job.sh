@@ -2,20 +2,20 @@
 
 # Create temporary directory to be populated with directories to bind-mount in the container
 # where writable file systems are necessary. 
-workdir="${PWD}/${SLUMR_SERVER_LOG_FOLDER}"
+workdir="${PWD}/${SLURM_SERVER_LOG_FOLDER}"
 mkdir -p -m 700 $workdir
 
 # Load singularitty module from cluster LMOD 
 module load singularity
 
 # pull default image from the library if not present
-if  [ "$SLUMR_SERVER_CONTAINER_NAME" == "$CONTAINER_NAME" ] && [ ! -e "$CONTAINER_NAME" ]; then
-    echo "singularity pull --library http://10.110.20.108 $SLUMR_SERVER_CONTAINER_NAME library://$SLUMR_SERVER_DEFAULT_CONTAINER_LIB" 
-    singularity pull --library http://10.110.20.108 $SLUMR_SERVER_CONTAINER_NAME library://$SLUMR_SERVER_DEFAULT_CONTAINER_LIB
+if  [ "$SLURM_SERVER_CONTAINER_NAME" == "$CONTAINER_NAME" ] && [ ! -e "$CONTAINER_NAME" ]; then
+    echo "singularity pull --library http://10.110.20.108 $SLURM_SERVER_CONTAINER_NAME library://$SLURM_SERVER_DEFAULT_CONTAINER_LIB" 
+    singularity pull --library http://10.110.20.108 $SLURM_SERVER_CONTAINER_NAME library://$SLURM_SERVER_DEFAULT_CONTAINER_LIB
 fi
 
 # Submit job using sbatch
-JOB_ID=$(sbatch --parsable $SLURM_SBATCH_OPTIONS $SLUMR_SERVER_SCRIPT "$CONTAINER_NAME")
+JOB_ID=$(sbatch --parsable $SLURM_SBATCH_OPTIONS $SLURM_SERVER_SCRIPT "$CONTAINER_NAME")
 
 ## Wait until the job has started
 while true; do

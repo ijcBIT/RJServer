@@ -42,6 +42,10 @@ If you need to use custom container images, you can specify the container image 
 ### SLURM Parameters
 The scripts run the servers in a SLURM job with default resources. If you need more resources, you can pass SLURM parameters directly to the scripts. A full list of SLURM parameters can be found [here](https://slurm.schedmd.com/sbatch.html).
 
+```bash
+./start_rstudio_server.sh --mem=10GB --cpus-per-task=10
+```
+
 ### Help
 For help, use the -h or --help parameter:
 
@@ -51,4 +55,9 @@ For help, use the -h or --help parameter:
 ```
 
 ## Issues and Requests
+
+> [!TIP]
+> RJServer creates a hidden folder named `.RJServer` in your > home directory on the cluster. Inside this folder, you can > check the logs to troubleshoot any issues. If nothing > > works, try removing the folder and starting again.
+
+
 If you encounter any issues or have requests, please submit an issue on GitHub: [RJServer Issues](https://github.com/ijcBIT/RJServer/issues)

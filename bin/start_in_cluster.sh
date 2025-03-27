@@ -8,15 +8,21 @@ CLUSTER_FOLDER_NAME=".RJServer"
 usage() {
     echo "Usage: ./<script_name>.sh [OPTIONS]"
     echo "Options:"
-    echo "  Any slurm parameter to pass to sbatch"
-    echo "  -c, --container name      Specify container name"
-    echo "                            Name of a singularity image containing ${SLUMR_SERVER_NAME}"
+    echo "  --                        Enter any Slurm parameter that you wish to pass to Slurm." 
+    echo "                            https://slurm.schedmd.com/sbatch.html"
+    echo ""                                  
+    echo "                            Example:"
+    echo "                            --mem=10GB --cpus-per-task=10"
+    echo ""
+    echo "  -c, --'container name'    Path to a Singularity image on your local workstation."
+    echo "                            The image must be derived from a ${SLURM_SERVER_NAME} image."
+    echo ""
     echo "  -h, --help                Display this help and exit"
     exit 1
 }
 
 # Parse arguments
-CONTAINER_NAME=$SLUMR_SERVER_CONTAINER_NAME
+CONTAINER_PATH=$SLURM_SERVER_CONTAINER_NAME
 while [[ $# -gt 0 ]]; do
     key="$1"
     case $key in
@@ -26,7 +32,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         --*=*) # --key=value or --container=value
             if [[ "$key" =~ ^--container=(.*) ]]; then
-                CONTAINER_NAME="${BASH_REMATCH[1]}"
+                CONTAINER_PATH="${BASH_REMATCH[1]}"
             else
                 SLURM_SBATCH_OPTIONS+=" $key"
             fi
@@ -34,7 +40,7 @@ while [[ $# -gt 0 ]]; do
         --*) # --key or --key value or --container or --container value
             if [[ "$key" == "--container" ]]; then
                 if [[ -n "$2" && ! "$2" =~ ^-.* ]]; then
-                    CONTAINER_NAME="$2"
+                    CONTAINER_PATH="$2"
                     shift
                 else
                     echo "Error: Missing value for --container"
@@ -49,11 +55,11 @@ while [[ $# -gt 0 ]]; do
             fi
             ;;
         -c=*) # -c=container
-            CONTAINER_NAME="${key#-c=}"
+            CONTAINER_PATH="${key#-c=}"
             ;;
         -c) # -c or -c container
             if [[ -n "$2" && ! "$2" =~ ^-.* ]]; then
-                CONTAINER_NAME="$2"
+                CONTAINER_PATH="$2"
                 shift
             else
                 echo "Error: Missing value for -c"
@@ -71,22 +77,29 @@ while [[ $# -gt 0 ]]; do
 done
 
 echo "SLURM_SBATCH_OPTIONS:$SLURM_SBATCH_OPTIONS"
-echo "CONTAINER_NAME:$CONTAINER_NAME"
+echo "CONTAINER_PATH:$CONTAINER_PATH"
+# extract container file name from the path
+CONTAINER_NAME=$(basename $CONTAINER_PATH)
 
 # Copy required files to the cluster if they are not there
 if ! ssh $CLUSTER_NAME "[ -d ~/$CLUSTER_FOLDER_NAME ]"; then 
     ssh $CLUSTER_NAME "mkdir -p ~/$CLUSTER_FOLDER_NAME" && scp -r bin $CLUSTER_NAME:~/$CLUSTER_FOLDER_NAME > /dev/null 2>&1 
 fi
 
+# Copy the container if it is different from the default and if it is not already in the cluster
+if [ "$CONTAINER_NAME" != "$SLURM_SERVER_CONTAINER_NAME" ] && ! ssh $CLUSTER_NAME "[ -e ~/$CLUSTER_FOLDER_NAME/$CONTAINER_NAME ]"; then
+    scp $CONTAINER_PATH $CLUSTER_NAME:~/$CLUSTER_FOLDER_NAME > /dev/null 2>&1
+fi
+
 # Submit job using sbatch and capture the node where the job is running
 OUTPUT=$(ssh $CLUSTER_NAME " cd $CLUSTER_FOLDER_NAME && \
     export SLURM_SBATCH_OPTIONS=\"${SLURM_SBATCH_OPTIONS}\" && \
     export CONTAINER_NAME=\"${CONTAINER_NAME}\" && \
-    export SLUMR_SERVER_NAME=\"${SLUMR_SERVER_NAME}\" && \
-    export SLUMR_SERVER_SCRIPT=\"${SLUMR_SERVER_SCRIPT}\" && \
-    export SLUMR_SERVER_CONTAINER_NAME=\"${SLUMR_SERVER_CONTAINER_NAME}\" && \
-    export SLUMR_SERVER_DEFAULT_CONTAINER_LIB=\"${SLUMR_SERVER_DEFAULT_CONTAINER_LIB}\" && \
-    export SLUMR_SERVER_LOG_FOLDER=\"${SLUMR_SERVER_LOG_FOLDER}\" && \
+    export SLURM_SERVER_NAME=\"${SLURM_SERVER_NAME}\" && \
+    export SLURM_SERVER_SCRIPT=\"${SLURM_SERVER_SCRIPT}\" && \
+    export SLURM_SERVER_CONTAINER_NAME=\"${SLURM_SERVER_CONTAINER_NAME}\" && \
+    export SLURM_SERVER_DEFAULT_CONTAINER_LIB=\"${SLURM_SERVER_DEFAULT_CONTAINER_LIB}\" && \
+    export SLURM_SERVER_LOG_FOLDER=\"${SLURM_SERVER_LOG_FOLDER}\" && \
     ./bin/start_job.sh $@ " 2>&1 | tee /dev/tty)
 
 # Capture the last line as JOBID (assuming it is the job ID)
