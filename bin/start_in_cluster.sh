@@ -83,8 +83,10 @@ CONTAINER_NAME=$(basename $CONTAINER_PATH)
 
 # Copy required files to the cluster if they are not there
 if ! ssh $CLUSTER_NAME "[ -d ~/$CLUSTER_FOLDER_NAME ]"; then 
-    ssh $CLUSTER_NAME "mkdir -p ~/$CLUSTER_FOLDER_NAME" && scp -r bin $CLUSTER_NAME:~/$CLUSTER_FOLDER_NAME > /dev/null 2>&1 
+    ssh $CLUSTER_NAME "mkdir -p ~/$CLUSTER_FOLDER_NAME" > /dev/null 2>&1 
 fi
+# Always update the bin folder scripts with the same version as the one on the workstation
+scp -r bin $CLUSTER_NAME:~/$CLUSTER_FOLDER_NAME > /dev/null 2>&1
 
 # Copy the container if it is different from the default and if it is not already in the cluster
 if [ "$CONTAINER_NAME" != "$SLURM_SERVER_CONTAINER_NAME" ] && ! ssh $CLUSTER_NAME "[ -e ~/$CLUSTER_FOLDER_NAME/$CONTAINER_NAME ]"; then

@@ -55,12 +55,17 @@ if [[ -z "$PORT" ]]; then
     exit
 fi
 
+# Create necessary directories to install libraries in the container
+mkdir -p  ${workdir}/R/user-libs
+
 # Create a temporary file to store the output
 OUTPUT_FILE=$(mktemp)
 
 # Run the singularity command in detached mode with token and password disabled
-nohup singularity exec --cleanenv "${CONTAINER_NAME}" start-notebook.py --port="${PORT}" \
-    --NotebookApp.token='' --NotebookApp.password='' > "${OUTPUT_FILE}" 2>&1 &
+R_LIBS
+nohup singularity exec -B ${workdir}/R/user-libs:${workdir}/R/user-libs --cleanenv --env R_LIBS_USER=${workdir}/R/user-libs "${CONTAINER_NAME}" start-notebook.py \
+    --port="${PORT}" --NotebookApp.token='' --NotebookApp.password='' > "${OUTPUT_FILE}" 2>&1 &
+
 
 # Capture the process ID (PID) of the background command
 pid=$!
