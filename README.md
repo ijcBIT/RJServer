@@ -29,6 +29,21 @@ To start an RStudio Server, run:
 ./start_rstudio_server.sh
 ```
 
+> [!TIP]
+> If your workstation does not have direct SSH access to the cluster, you can configure SSH to use a tunnel. To access the IJC cluster, add the following lines to the ~/.ssh/config file on your personal computer. Be sure to replace $USER with your actual username in the institute.
+> 
+> ```
+> Host minastirith  
+>     HostName minastirith  
+>     User $USER  
+>     ProxyJump loginnode.carrerasresearch.org  
+> 
+> Host loginnode.carrerasresearch.org  
+>     HostName loginnode.carrerasresearch.org  
+>     User $USER  
+>     Port 4242  
+> ```
+
 ### Custom Container Images
 As default it uses a singularity image created from the bioconductor images [bioconductor/tidyverse:RELEASE_3_20-R-4.4.2](https://www.bioconductor.org/help/docker/) for the studio server and [jupyter/datascience-notebook:2024-06-24](https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html#jupyter-datascience-notebook) for Jypyter notebook.
 

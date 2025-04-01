@@ -129,7 +129,17 @@ Close this shell when you are done to finish the job in the cluster.
 END
 
 # open the browser session
-xdg-open http://localhost:$LOCAL_PORT
+# Detect OS and open browser accordingly
+if command -v xdg-open >/dev/null 2>&1; then
+    # Linux
+    xdg-open http://localhost:$LOCAL_PORT
+elif command -v open >/dev/null 2>&1; then
+    # macOS
+    open http://localhost:$LOCAL_PORT
+else
+    echo "Could not detect the OS or an appropriate command to open the browser."
+    echo "Open it manually: http://localhost:$LOCAL_PORT"
+fi
 
 
 # Function to clean up the tunnel
